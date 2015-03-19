@@ -1,0 +1,26 @@
+/*********************************************/
+Participant Number: 1
+------Epochs-----
+
+Epoch 0: 
+./imagesRenamed/female_neut/13.jpg
+./imagesRenamed/outdoor/46.jpg
+./imagesRenamed/male_neut/26.jpg
+./imagesRenamed/indoor/10.jpg
+
+
+Epoch 1: 
+./imagesRenamed/male_neut/13.jpg
+./imagesRenamed/outdoor/50.jpg
+./imagesRenamed/female_neut/49.jpg
+./imagesRenamed/indoor/66.jpg
+
+
+
+-endheader-
+Epoch 0 Type: faces
+Trial:0,ImageRatio:0.5,StimOnset:0,StimOffset:1000,TimeOfResponse:1426803387503,ResponseTime:1426803387503,Correct:true
+Trial:1,ImageRatio:0.5,StimOnset:0,StimOffset:0,TimeOfResponse:0,ResponseTime:0,Correct:false
+Epoch 1 Type: places
+Trial:0,ImageRatio:0.5,StimOnset:0,StimOffset:0,TimeOfResponse:0,ResponseTime:0,Correct:false
+Trial:1,ImageRatio:0.5,StimOnset:0,StimOffset:1000,TimeOfResponse:1426803411334,ResponseTime:1426803411334,Correct:true

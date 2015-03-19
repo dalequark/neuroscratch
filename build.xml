@@ -1,0 +1,97 @@
+<project name="EmotivExperiment" default="compile">
+
+    <target name="clean">
+				<delete dir="emotiv/build"/>
+        <delete dir="build"/>
+    </target>
+
+		<path id="classpath">
+			<fileset dir="emotiv/lib"/>
+			<fileset dir="emotiv/build"/>
+			<fileset dir="src"/>
+      <pathelement location="src/java_websocket.jar"/>
+		</path>
+
+		<path id="runpath">
+			<fileset dir="build"/>
+			<fileset dir="src"/>
+		</path>
+
+		<target name ="emotiv">
+			<javac srcdir="emotiv/src" destdir="emotiv/build" classpathref="classpath"/>
+			<jar destfile="src/eeglog.jar">
+				<fileset dir="emotiv/build" includes="**/*.class" />
+			</jar>
+		</target>
+
+		<target name ="eeglog" depends="emotiv">
+			<java fork="true" classname="EEGLog">
+					<classpath>
+							<path refid="classpath"/>
+							<path location="emotiv/build"/>
+					</classpath>
+			</java>
+		</target>
+
+    <target name ="eeglog2" depends="emotiv">
+      <java fork="true" classname="EEGLog2">
+          <classpath>
+              <path refid="classpath"/>
+              <path location="emotiv/build"/>
+          </classpath>
+      </java>
+    </target>
+
+    <target name ="eegloggingthread" depends="emotiv">
+      <java fork="true" classname="EEGLoggingThread">
+        <classpath>
+          <path location="build"/>
+          <path location="src/java_websocket.jar"/>
+          <path location="emotiv/build"/>
+          <path location="emotiv/lib/jna.jar"/>
+        </classpath>
+        <arg value="1000"/>
+      </java>
+    </target>
+
+    <target name="compile" depends="emotiv">
+				<mkdir dir="build"/>
+        <javac srcdir="src" destdir="build" classpathref="classpath" debug="on"/>
+    </target>
+
+    <target name="deldata" depends="">
+      <delete dir="testdata"/>
+      <mkdir dir="testdata"/>
+    </target>
+
+    <target name="delrealdata" depends="">
+      <delete dir="participant_data/eeg"/>
+      <mkdir dir="participant_data/eeg"/>
+      <delete dir="participant_data/log"/>
+      <mkdir dir="participant_data/log"/>
+    </target>
+
+
+
+    <target name="server">
+        <java fork="true" classname= "AttentionExperiment">
+          <jvmarg value="-agentlib:jdwp=transport=dt_socket,server=y,suspend=n"/>
+          <classpath>
+            <path location="build"/>
+            <path location="src/java_websocket.jar"/>
+            <path location="emotiv/build"/>
+            <path location="emotiv/lib/jna.jar"/>
+          </classpath>
+          <arg value="${arg0}"/>
+          <arg value="participant_data"/>
+          <arg value="1"/>
+          <arg value="1"/>
+          <!--
+          <arg value="${arg0}"/>
+          <arg value="${arg1}"/>
+          <arg value="${arg2}"/>
+          -->
+        </java>
+    </target>
+
+</project>
