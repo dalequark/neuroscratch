@@ -42,7 +42,7 @@ public class EEGLog {
 
 	public void addUser(){
 	  	return;
-		// do nothing	
+		// do nothing
 	}
 
 	public double[][] getEEG(){
@@ -53,14 +53,14 @@ public class EEGLog {
 			}
 		}
 		try{
-			Thread.sleep(30);
+			Thread.sleep(0, 300000);
 		}
 		catch(InterruptedException e){
 			System.out.println("getEEG was interrupted");
 		}
 		return data;
 	}
-/*	
+/*
 	public EEGLog(){
 		eEvent = Edk.INSTANCE.EE_EmoEngineEventCreate();
 		eState = Edk.INSTANCE.EE_EmoStateCreate();

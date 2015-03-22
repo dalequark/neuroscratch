@@ -18,8 +18,8 @@ public class AttentionExperiment extends WebSocketServer{
   static String eegOutputFileName = "eegdata.csv";
   // see what megan does here...
   static boolean DEBUG = true;
-  static int TRAINING_EPOCHS = 1;//60;
-  static int FEEDBACK_EPOCHS = 1;//4;
+  static int TRAINING_EPOCHS = 2;//60;
+  static int FEEDBACK_EPOCHS = 3;//4;
   static int TRIALS_PER_EPOCH = 2;
   static int NUM_EPOCHS = TRAINING_EPOCHS + FEEDBACK_EPOCHS;
   static int NUM_IMAGES_PER_CATEGORY = 70;
@@ -91,7 +91,7 @@ public class AttentionExperiment extends WebSocketServer{
       Socket controlSocket = new Socket("localhost", PUBLISH_PORT);
       controlOut = new PrintWriter(new DataOutputStream(controlSocket.getOutputStream()));
       controlIn = new BufferedReader(new InputStreamReader(controlSocket.getInputStream()));
-      controlOut.println("control");
+      controlOut.println("cont");
       controlOut.flush();
       System.out.println("Successfuly connected to python backend");
 
@@ -408,6 +408,7 @@ public void sendToAll( String text ) {
           journal.addTrial(thisRatio, epochImageFiles[epochNum][trialNum%2],
             epochImageFiles[epochNum][trialNum%2+1]);
           sendToAll(getTrialImagesCommand(epochNum, trialNum, thisRatio));
+          stimOnset = System.currentTimeMillis();
           timer.schedule(new doNextLater(), RESPONSE_TIME);
           state = State.TRIAL_NORESP;
           break;
@@ -431,10 +432,11 @@ public void sendToAll( String text ) {
                     // start training
                     if(realFeedback){
                       try{
-                        controlOut.println("model");
+                        logger.flush();
+                        controlOut.println("model," + journal.fileName + "," + logger.fileName);
                         controlOut.flush();
                         String data = controlIn.readLine();
-                        if(data == "ok"){
+                        if(data.equals("ok")){
                           System.out.println("Model built successfully");
                         }
                         else{
@@ -463,6 +465,7 @@ public void sendToAll( String text ) {
               journal.addTrial(thisRatio, epochImageFiles[epochNum][trialNum%2],
                 epochImageFiles[epochNum][trialNum%2+1]);
               sendToAll(getTrialImagesCommand(epochNum, trialNum, thisRatio));
+              stimOnset = System.currentTimeMillis();
               timer.schedule(new doNextLater(), RESPONSE_TIME);
             }
           }
@@ -480,12 +483,14 @@ public void sendToAll( String text ) {
                 // start training
                 if(realFeedback){
                   try{
-                    controlOut.println("model");
+                    controlOut.println("model," + journal.fileName + "," + logger.fileName);
                     controlOut.flush();
-                    if(controlIn.readLine() == "ok\n"){
+                    String data = controlIn.readLine();
+                    if(data.equals("ok")){
                       System.out.println("Model built successfully");
                     }
                     else{
+                      System.out.println("Got data " +data );
                       realFeedback = false;
                     }
                   }
@@ -507,6 +512,7 @@ public void sendToAll( String text ) {
               journal.addTrial(thisRatio, epochImageFiles[epochNum][trialNum%2],
                 epochImageFiles[epochNum][trialNum%2+1]);
               sendToAll(getTrialImagesCommand(epochNum, trialNum, thisRatio));
+              stimOnset = System.currentTimeMillis();
               timer.schedule(new doNextLater(), RESPONSE_TIME);
               state = State.TRIAL_NORESP;
             }
@@ -535,10 +541,11 @@ public void sendToAll( String text ) {
           epochNum++;
           trialNum = 0;
           journal.addEpoch(epochType(epochNum));
-          thisRatio = getNewRatio();
+          thisRatio = getNewRatio(trialNum);
           journal.addTrial(thisRatio, epochImageFiles[epochNum][trialNum%2],
             epochImageFiles[epochNum][trialNum%2+1]);
           sendToAll(getTrialImagesCommand(epochNum, trialNum, thisRatio));
+          stimOnset = System.currentTimeMillis();
           timer.schedule(new doNextLater(), RESPONSE_TIME);
           state = State.FB_TRIAL_NORESP;
           break;
@@ -568,10 +575,11 @@ public void sendToAll( String text ) {
               }
             }
             else{
-              thisRatio = getNewRatio();
+              thisRatio = getNewRatio(trialNum);
               journal.addTrial(thisRatio, epochImageFiles[epochNum][trialNum%2],
                 epochImageFiles[epochNum][trialNum%2+1]);
               sendToAll(getTrialImagesCommand(epochNum, trialNum, thisRatio));
+              stimOnset = System.currentTimeMillis();
               timer.schedule(new doNextLater(), RESPONSE_TIME);
             }
           }
@@ -596,10 +604,11 @@ public void sendToAll( String text ) {
               }
             }
             else{
-              thisRatio = getNewRatio();
+              thisRatio = getNewRatio(trialNum);
               journal.addTrial(thisRatio, epochImageFiles[epochNum][trialNum%2],
                 epochImageFiles[epochNum][trialNum%2+1]);
               sendToAll(getTrialImagesCommand(epochNum, trialNum, thisRatio));
+              stimOnset = System.currentTimeMillis();
               timer.schedule(new doNextLater(), RESPONSE_TIME);
               state = State.FB_TRIAL_NORESP;
             }
@@ -657,12 +666,13 @@ public void sendToAll( String text ) {
 
   }
 
-  double getNewRatio(){
+  double getNewRatio(int trialNum){
     if(realFeedback){
-      controlOut.println("pred," + System.currentTimeMillis());
+      controlOut.println("pred," + System.currentTimeMillis() + "," + trialNum);
       controlOut.flush();
       try{
-        double thisRatio = Double.parseDouble(controlIn.readLine());
+        String data = controlIn.readLine();
+        double thisRatio = Double.parseDouble(data);
         System.out.println("Got ratio " + thisRatio);
         return thisRatio;
       }

@@ -8,7 +8,7 @@ public class EEGJournal{
   private static boolean DEBUG = true;
   private int participantNum;
   private int trialLength;
-  private String fileName;
+  public String fileName;
   private PrintWriter writer;
   private Queue<Epoch> epochQueue;
   private int numEpochs;
@@ -30,11 +30,13 @@ public class EEGJournal{
     // write header data to file
     writer.println(header);
     writer.println("-endheader-");
+    writer.flush();
   }
 
   public EEGJournal(String outputDir, int participantNum, int trialLength) throws IOException{
     this(outputDir, participantNum,  "Participant " + participantNum + ", Date: " + new Date(), trialLength);
   }
+
 
 
   public String getFilename(){
@@ -43,6 +45,7 @@ public class EEGJournal{
 
   public synchronized void addEpoch(String epochType){
     thisEpoch = new Epoch(epochType, numEpochs);
+    writer.println("Epoch " + thisEpoch.epochNum + " Type: " + thisEpoch.epochType);
     numEpochs++;
     epochQueue.add(thisEpoch);
     //writer.println(thisEpoch.getHeader());
@@ -66,12 +69,14 @@ public class EEGJournal{
 
   public synchronized void close(){
     System.out.println("Closing journal");
+    /*
     for(Epoch thisEpoch : epochQueue){
       writer.println("Epoch " + thisEpoch.epochNum + " Type: " + thisEpoch.epochType);
       for(Trial trial : thisEpoch.trialQueue){
         writer.println(trial);
       }
     }
+    */
     writer.close();
   }
 
@@ -106,6 +111,8 @@ public class EEGJournal{
       thisTrial.responseTime = responseTime;
       thisTrial.correct = correct;
       thisTrial.stimulusOffset = timeImageOnset + trialLength;
+      writer.println(thisTrial);
+      writer.flush();
       if(DEBUG) System.out.println(thisEpoch.thisTrial);
 
     }

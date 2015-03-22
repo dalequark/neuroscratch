@@ -21,7 +21,7 @@ class EEGLoggingThread implements Runnable {
   PrintWriter outToServer;
   DataInputStream inFromServer;
   private PrintWriter writer;
-  private String fileName;
+  public String fileName;
 
 
   private final Semaphore resumed = new Semaphore(1);
@@ -32,7 +32,7 @@ class EEGLoggingThread implements Runnable {
   public EEGLoggingThread(EEGLog log, String outputDir, int participantNum, boolean withTcp) throws Exception{
     resumed.acquire();
     SimpleDateFormat ft = new SimpleDateFormat("yyyy.MM.dd.hh.mm");
-    fileName = outputDir + "/eeg_" + participantNum + "_" + ft.format(new Date());
+    this.fileName = outputDir + "/eeg_" + participantNum + "_" + ft.format(new Date());
     this.log = log;
     this.withTcp = withTcp;
     if(withTcp){
@@ -49,8 +49,9 @@ class EEGLoggingThread implements Runnable {
     t.start();
   }
 
-  public String getFilename(){
-      return fileName;
+
+  public void flush(){
+    writer.flush();
   }
 
   public void run() {
@@ -104,7 +105,7 @@ class EEGLoggingThread implements Runnable {
           for(int channel = 0; channel < data.length; channel++){
             writer.print(data[channel][datum] + ",");
           }
-            // space the points out given the priod (128 samples per second)
+            // space the points out given the period (128 samples per second)
             writer.println(timeStamp + (num_points - 1 - datum) * pointPeriod);
         }
 
@@ -117,7 +118,9 @@ class EEGLoggingThread implements Runnable {
           for(int channel = 0; channel < data.length; channel++){
             outToServer.write(data[channel][datum] + ",");
           }
-          outToServer.write('\n');
+          outToServer.write(timeStamp + "\n");
+          // fix this when using real headset
+          //outToServer.write((timeStamp + (num_points - 1 - datum) * pointPeriod) + "\n");
           outToServer.flush();
         }
         catch(Exception e){
