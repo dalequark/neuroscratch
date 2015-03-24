@@ -94,4 +94,61 @@
         </java>
     </target>
 
+    <target name="pre">
+        <java fork="true" classname= "AttentionExperiment">
+          <jvmarg value="-agentlib:jdwp=transport=dt_socket,server=y,suspend=n"/>
+          <classpath>
+            <path location="build"/>
+            <path location="src/java_websocket.jar"/>
+            <path location="emotiv/build"/>
+            <path location="emotiv/lib/jna.jar"/>
+          </classpath>
+          <arg value="${arg0}"/>
+          <arg value="participant_data"/>
+          <arg value="0"/>
+          <arg value="0"/>
+          <arg value="0"/>
+          <arg value="2"/>
+          <arg value="0"/>
+        </java>
+    </target>
+
+    <target name="exp">
+        <java fork="true" classname= "AttentionExperiment">
+          <jvmarg value="-agentlib:jdwp=transport=dt_socket,server=y,suspend=n"/>
+          <classpath>
+            <path location="build"/>
+            <path location="src/java_websocket.jar"/>
+            <path location="emotiv/build"/>
+            <path location="emotiv/lib/jna.jar"/>
+          </classpath>
+          <arg value="${arg0}"/>
+          <arg value="participant_data"/>
+          <arg value="1"/>
+          <arg value="1"/>
+          <arg value="1"/>
+          <arg value="2"/>
+          <arg value="2"/>
+        </java>
+    </target>
+
+    <target name="post">
+        <java fork="true" classname= "AttentionExperiment">
+          <jvmarg value="-agentlib:jdwp=transport=dt_socket,server=y,suspend=n"/>
+          <classpath>
+            <path location="build"/>
+            <path location="src/java_websocket.jar"/>
+            <path location="emotiv/build"/>
+            <path location="emotiv/lib/jna.jar"/>
+          </classpath>
+          <arg value="${arg0}"/>
+          <arg value="participant_data"/>
+          <arg value="0"/>
+          <arg value="0"/>
+          <arg value="0"/>
+          <arg value="10"/>
+          <arg value="0"/>
+        </java>
+    </target>
+
 </project>

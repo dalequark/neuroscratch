@@ -141,6 +141,11 @@ class EEGLoggingThread implements Runnable {
     doQuit = true;
     try{
       System.out.println("Acquisition thread is alive? " + t.isAlive());
+      if(!t.isAlive()){
+        writer.close();
+        readyQuit.release();
+        return;
+      }
       //System.out.println("Waiting to acquire ready quit, with que len:" + readyQuit.getQueueLength());
       readyQuit.tryAcquire();
       if(readyQuit.tryAcquire()){

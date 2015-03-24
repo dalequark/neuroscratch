@@ -14,7 +14,6 @@ public class EEGJournal{
   private int numEpochs;
   private Epoch thisEpoch;
 
-  static String[] channels = EEGLog.channels;
 
   public EEGJournal(String outputDir, int participantNum, String header, int trialLength) throws IOException{
     this.trialLength = trialLength;

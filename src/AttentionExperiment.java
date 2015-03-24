@@ -18,10 +18,10 @@ public class AttentionExperiment extends WebSocketServer{
   static String eegOutputFileName = "eegdata.csv";
   // see what megan does here...
   static boolean DEBUG = true;
-  static int TRAINING_EPOCHS = 2;//60;
-  static int FEEDBACK_EPOCHS = 3;//4;
-  static int TRIALS_PER_EPOCH = 2;
-  static int NUM_EPOCHS = TRAINING_EPOCHS + FEEDBACK_EPOCHS;
+  int TRAINING_EPOCHS;
+  int FEEDBACK_EPOCHS;
+  static int TRIALS_PER_EPOCH = 8;
+  int NUM_EPOCHS;
   static int NUM_IMAGES_PER_CATEGORY = 70;
   static int WEB_SOCKETS_PORT = 8885;
   /* in millis, how long is each trial? i.e. how long do they get to respond? */
@@ -66,7 +66,7 @@ public class AttentionExperiment extends WebSocketServer{
 
   Dfa dfa;
 
-  public AttentionExperiment (int participantNum, String outputDir, boolean realFeedback, boolean withEEG, boolean tcpPublish) throws Exception{
+  public AttentionExperiment (int participantNum, String outputDir, boolean realFeedback, boolean withEEG, boolean tcpPublish, int trainEpochs, int feedbackEpochs) throws Exception{
     super( new InetSocketAddress( WEB_SOCKETS_PORT ) );
 
     System.out.println("Starting new GUI web socket on port " + WEB_SOCKETS_PORT);
@@ -78,13 +78,25 @@ public class AttentionExperiment extends WebSocketServer{
     done = false;
     /* If we're using the emotiv, star the emotiv logging */
     if(withEEG){
-      eeglog = new EEGLog();
+      eeglog = new EEGLogReal();
       eeglog.tryConnect();
       System.out.println("Successfully connected to emotiv");
       eeglog.addUser();
       System.out.println("Successfully added user. Starting logging thread");
       logger = new EEGLoggingThread(eeglog, outputDir + "/eeg", participantNum, tcpPublish);
     }
+    else{
+      eeglog = new EEGLogFake();
+      eeglog.tryConnect();
+      System.out.println("Successfully connected to fake emotiv");
+      eeglog.addUser();
+      System.out.println("Successfully added user. Starting logging thread");
+      logger = new EEGLoggingThread(eeglog, outputDir + "/eeg", participantNum, tcpPublish);
+    }
+
+    TRAINING_EPOCHS = trainEpochs;
+    FEEDBACK_EPOCHS = feedbackEpochs;
+    NUM_EPOCHS = TRAINING_EPOCHS + FEEDBACK_EPOCHS;
 
     /* Create python control port*/
     if(realFeedback){
@@ -394,10 +406,8 @@ public void sendToAll( String text ) {
           epochNum = -1;
           sendToAll(getInstructionCommand(epochNum+1));
           thisRatio = 0.5;
-          if(withEEG){
-            System.out.println("Beginning to log EEG data!");
-            logger.start();
-          }
+          System.out.println("Beginning to log EEG data!");
+          logger.start();
           state = State.EPOCH_INSTRUCT;
           break;
 
@@ -408,6 +418,7 @@ public void sendToAll( String text ) {
           journal.addTrial(thisRatio, epochImageFiles[epochNum][trialNum%2],
             epochImageFiles[epochNum][trialNum%2+1]);
           sendToAll(getTrialImagesCommand(epochNum, trialNum, thisRatio));
+          sendToAll("T," + (epochType[epochNum] == FACES ? "Faces" : "Places"));
           stimOnset = System.currentTimeMillis();
           timer.schedule(new doNextLater(), RESPONSE_TIME);
           state = State.TRIAL_NORESP;
@@ -465,6 +476,7 @@ public void sendToAll( String text ) {
               journal.addTrial(thisRatio, epochImageFiles[epochNum][trialNum%2],
                 epochImageFiles[epochNum][trialNum%2+1]);
               sendToAll(getTrialImagesCommand(epochNum, trialNum, thisRatio));
+              sendToAll("T," + (epochType[epochNum] == FACES ? "Faces" : "Places"));
               stimOnset = System.currentTimeMillis();
               timer.schedule(new doNextLater(), RESPONSE_TIME);
             }
@@ -512,6 +524,7 @@ public void sendToAll( String text ) {
               journal.addTrial(thisRatio, epochImageFiles[epochNum][trialNum%2],
                 epochImageFiles[epochNum][trialNum%2+1]);
               sendToAll(getTrialImagesCommand(epochNum, trialNum, thisRatio));
+              sendToAll("T," + (epochType[epochNum] == FACES ? "Faces" : "Places"));
               stimOnset = System.currentTimeMillis();
               timer.schedule(new doNextLater(), RESPONSE_TIME);
               state = State.TRIAL_NORESP;
@@ -531,6 +544,7 @@ public void sendToAll( String text ) {
               journal.close();
               if(logger != null)  logger.close();
               if(controlOut != null)  controlOut.close();
+              System.exit(0);
             }
 
           }
@@ -545,6 +559,7 @@ public void sendToAll( String text ) {
           journal.addTrial(thisRatio, epochImageFiles[epochNum][trialNum%2],
             epochImageFiles[epochNum][trialNum%2+1]);
           sendToAll(getTrialImagesCommand(epochNum, trialNum, thisRatio));
+          sendToAll("T," + (epochType[epochNum] == FACES ? "Faces" : "Places"));
           stimOnset = System.currentTimeMillis();
           timer.schedule(new doNextLater(), RESPONSE_TIME);
           state = State.FB_TRIAL_NORESP;
@@ -579,6 +594,7 @@ public void sendToAll( String text ) {
               journal.addTrial(thisRatio, epochImageFiles[epochNum][trialNum%2],
                 epochImageFiles[epochNum][trialNum%2+1]);
               sendToAll(getTrialImagesCommand(epochNum, trialNum, thisRatio));
+              sendToAll("T," + (epochType[epochNum] == FACES ? "Faces" : "Places"));
               stimOnset = System.currentTimeMillis();
               timer.schedule(new doNextLater(), RESPONSE_TIME);
             }
@@ -608,6 +624,7 @@ public void sendToAll( String text ) {
               journal.addTrial(thisRatio, epochImageFiles[epochNum][trialNum%2],
                 epochImageFiles[epochNum][trialNum%2+1]);
               sendToAll(getTrialImagesCommand(epochNum, trialNum, thisRatio));
+              sendToAll("T," + (epochType[epochNum] == FACES ? "Faces" : "Places"));
               stimOnset = System.currentTimeMillis();
               timer.schedule(new doNextLater(), RESPONSE_TIME);
               state = State.FB_TRIAL_NORESP;
@@ -664,41 +681,47 @@ public void sendToAll( String text ) {
       "," + ratio;
     }
 
-  }
+    double getNewRatio(int trialNum){
+      if(realFeedback){
+        controlOut.println("pred," + System.currentTimeMillis() + "," + trialNum + "," + (epochType[epochNum] == FACES ? "faces" : "places"));
+        controlOut.flush();
+        try{
+          String data = controlIn.readLine();
+          double thisRatio = Double.parseDouble(data);
+          System.out.println("Got ratio " + thisRatio);
+          return thisRatio;
+        }
+        catch(Exception e){
+          System.out.println(e);
+          return 0.5;
+        }
+      }
 
-  double getNewRatio(int trialNum){
-    if(realFeedback){
-      controlOut.println("pred," + System.currentTimeMillis() + "," + trialNum);
-      controlOut.flush();
-      try{
-        String data = controlIn.readLine();
-        double thisRatio = Double.parseDouble(data);
-        System.out.println("Got ratio " + thisRatio);
-        return thisRatio;
-      }
-      catch(Exception e){
-        System.out.println(e);
-        return 0.5;
-      }
+      return 0.5;
     }
 
-    return 0.5;
   }
+
+
 
   public static void main(String[] args){
     if(args.length < 4){
-      System.out.println("Usage: <ParticipantNum> <outputDir> <realFeedback (1,0)> <withEEG> <tcpPublish (1,0)>");
+      System.out.println("Usage: <ParticipantNum> <outputDir> <realFeedback (1,0)> <withEEG> <tcpPublish (1,0)> <trainEpochs> <feedbackEpochs>");
       return;
     }
 
     int participantNum = Integer.parseInt(args[0]);
     String outputDir = args[1];
     boolean feedback = (Integer.parseInt(args[2]) == 1) ? true : false;
+    boolean withEEG = (Integer.parseInt(args[3]) == 1) ? true : false;
     boolean tcpPublish = (Integer.parseInt(args[3]) == 1) ? true : false;
+    int trainEpochs = (Integer.parseInt(args[5]));
+    int feedbackEpochs = (Integer.parseInt(args[6]));
+
 
     try{
       AttentionExperiment thisExperiment =
-        new AttentionExperiment(participantNum, outputDir, true, true, true);
+        new AttentionExperiment(participantNum, outputDir, feedback, withEEG, tcpPublish, trainEpochs, feedbackEpochs);
       thisExperiment.start();
     }
     catch(Exception e){
